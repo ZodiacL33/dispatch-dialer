@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialer Assistant</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header>
+  <span id="gv" class="pill">Voice: checking</span>
+  <span id="counts"></span>
+</header>
+
+<div class="row fleet">
+  <label>Min trucks <input id="minFleet" type="number" min="0"></label>
+  <label>Max trucks <input id="maxFleet" type="number" min="0"></label>
+</div>
+<div class="row jump">
+  <label>Start from MC <input id="jumpMc" type="number" min="1" placeholder="e.g. 1300000"></label>
+  <button id="jump">Go</button>
+</div>
+<p id="blockInfo" class="muted"></p>
+<p id="status" role="status"></p>
+
+<main id="empty" hidden>
+  <p>No call list loaded yet. Run <code>build_queue.py</code>, then load the <code>queue.json</code> it creates.</p>
+  <label class="btn primary">Load queue.json<input id="file" type="file" accept=".json" hidden></label>
+</main>
+
+<main id="carrier" hidden>
+  <h1 id="name"></h1>
+  <p id="ids" class="muted"></p>
+  <dl>
+    <dt>Phone</dt><dd id="phone"></dd>
+    <dt>Fleet</dt><dd id="fleet"></dd>
+    <dt>Owner</dt><dd id="owner"></dd>
+    <dt>Email</dt><dd id="email"></dd>
+    <dt>Address</dt><dd id="addr"></dd>
+  </dl>
+  <details>
+    <summary>More details</summary>
+    <dl id="more"></dl>
+    <p><a id="safer" target="_blank" rel="noopener">Open SAFER snapshot (inspections, crashes, live authority)</a></p>
+  </details>
+
+  <div class="row">
+    <button id="dial" class="primary">Dial</button>
+    <button id="skip">Skip</button>
+    <button id="pause">Pause</button>
+    <button id="copy">Copy info</button>
+  </div>
+  <label class="check"><input id="autoDial" type="checkbox"> Dial the next carrier automatically after I hang up</label>
+
+  <p class="muted">Result of this call</p>
+  <div class="row" id="outcomes">
+    <button data-o="interested">Interested</button>
+    <button data-o="callback">Call back</button>
+    <button data-o="noanswer">No answer</button>
+    <button data-o="notinterested">Not interested</button>
+    <button data-o="dnc">Do not call</button>
+  </div>
+
+  <label>Note (optional) <textarea id="note" rows="2" placeholder="Anything worth remembering"></textarea></label>
+  <p class="muted">Save this carrier (optional). Saved carriers are never dialed automatically, only when you press Call yourself.</p>
+  <div class="row" id="saveAs">
+    <button data-t="lead">Lead</button>
+    <button data-t="sale">Sale</button>
+    <button data-t="followup">Follow-up</button>
+  </div>
+  <label>Follow-up date (optional) <input id="followDate" type="date"></label>
+  <p id="savedTag" class="muted"></p>
+  <button id="unsave" hidden>Remove from saved</button>
+</main>
+
+<details id="savedBox">
+  <summary>Saved carriers (<span id="savedCount">0</span>)</summary>
+  <label>Show
+    <select id="savedFilter">
+      <option value="all">All</option><option value="lead">Leads</option><option value="sale">Sales</option>
+      <option value="followup">Follow-ups</option><option value="dnc">Do not call</option>
+    </select>
+  </label>
+  <ul id="savedList"></ul>
+  <div class="row"><button id="exportSaved">Export saved (CSV)</button></div>
+</details>
+
+<details id="statsBox">
+  <summary>Stats by MC block</summary>
+  <p class="muted">One row per block of <span id="bs">10000</span> MC numbers. Repeating a block later starts a new pass with its own row. Picked up = you marked Interested, Call back, Not interested or Do not call. Rates only count calls you marked.</p>
+  <div class="scroll"><table id="stats"></table></div>
+  <div class="row"><button id="exportStats">Export stats (CSV)</button></div>
+</details>
+
+<details id="settings">
+  <summary>Settings</summary>
+  <label>Seconds between hang-up and next dial (3 or more) <input id="delaySec" type="number" min="3"></label>
+  <label>Daily call goal (0 = off) <input id="dailyGoal" type="number" min="0"></label>
+  <label>MC block size for stats <input id="blockSize" type="number" min="100"></label>
+  <label class="check"><input id="dryRun" type="checkbox"> Test mode: load the number but do not press Call</label>
+  <label class="check"><input id="liveCheck" type="checkbox"> Live FMCSA check before each dial (needs a free key)</label>
+  <label>FMCSA webKey <input id="webKey" type="text" autocomplete="off"></label>
+  <p class="muted">Google Voice button matching (change only if Google changes the page)</p>
+  <label>End-call button <input id="endRe" type="text"></label>
+  <label>Call button <input id="callRe" type="text"></label>
+  <label>Page-ready marker <input id="readyRe" type="text"></label>
+  <div class="row">
+    <label class="btn">Load queue.json<input id="file2" type="file" accept=".json" hidden></label>
+    <button id="export">Export call log (CSV)</button>
+    <button id="reset" class="danger">Clear call history and stats</button>
+  </div>
+  <p class="muted">Clearing history keeps your saved carriers and notes.</p>
+</details>
+<script src="sidepanel.js"></script>
+</body>
+</html>

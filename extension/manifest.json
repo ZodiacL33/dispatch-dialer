@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Dispatch Dialer Assistant",
+  "version": "1.0.0",
+  "description": "Shows carrier info next to Google Voice and dials your pre-filtered call queue safely.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "unlimitedStorage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://voice.google.com/*",
+    "https://mobile.fmcsa.dot.gov/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Dialer Assistant"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://voice.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
