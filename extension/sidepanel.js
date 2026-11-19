@@ -250,6 +250,7 @@ function jump() {
   const v = Number($('jumpMc').value);
   if (!Number.isInteger(v) || v <= 0) { S.msg = 'Enter an MC number, for example 1300000.'; return render(); }
   if (S.phase === 'dialing' || S.phase === 'oncall') { S.msg = 'Finish the current call first.'; return render(); }
+  if (!S.queue.length) { S.msg = 'Load queue.json first (see Settings), then jump to an MC.'; return render(); }
   const i = S.queue.findIndex((c) => Number(c.mc) >= v);
   if (i < 0) { S.msg = `No qualifying carriers at or after MC ${v}. That number may be higher than the newest MC in FMCSA's data. Try a lower one.`; return render(); }
   const b = blockOf(v);

@@ -70,22 +70,38 @@ def truthy(v):
     return (v or "").strip().upper() in ("X", "Y", "1", "TRUE", "T")
 
 
-def download(path):
+def download(path, insecure=False):
+    import shutil, ssl, subprocess
     print("Downloading the FMCSA census (large file, a few minutes)...")
+    ctx = ssl._create_unverified_context() if insecure else None
     req = urllib.request.Request(URL, headers={"User-Agent": "dispatch-dialer/1.0"})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r, open(path, "wb") as f:
+        with urllib.request.urlopen(req, timeout=60, context=ctx) as r, open(path, "wb") as f:
             total, done = int(r.headers.get("Content-Length") or 0), 0
             while chunk := r.read(1 << 20):
                 f.write(chunk)
                 done += len(chunk)
                 print(f"\r  {done >> 20} MB" + (f" / {total >> 20} MB" if total else ""), end="")
         print()
+        return
+    except PermissionError:
+        sys.exit("\nWindows will not let this folder be written to (Program Files is protected).\n"
+                 "Move the whole dispatch-dialer folder to your Desktop or Documents and run again.")
     except Exception as e:
+        err = str(e)
+    if os.path.exists(path):
+        os.remove(path)
+    if "CERTIFICATE_VERIFY_FAILED" in err and shutil.which("curl"):
+        print("\nPython could not verify the website certificate. Retrying with Windows' own downloader (curl)...")
+        rc = subprocess.call(["curl", "-L", "--fail", "-o", path, URL])
+        if rc == 0 and os.path.exists(path) and os.path.getsize(path) > 1_000_000:
+            return
         if os.path.exists(path):
             os.remove(path)
-        sys.exit(f"\nDownload failed: {e}\nDownload the CSV manually from "
-                 "https://data.transportation.gov/d/az4n-8mr2 and run again with --census yourfile.csv")
+    sys.exit(f"\nDownload failed: {err}\n"
+             "Option 1: download the CSV in Chrome from https://data.transportation.gov/d/az4n-8mr2 "
+             "(Export > CSV), save it in this folder as census.csv, then run: python build_queue.py\n"
+             "Option 2: run: python build_queue.py --insecure   (skips the certificate check; the data is public)")
 
 
 def safe_rows(rd):
@@ -103,6 +119,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--census", default="census.csv")
     ap.add_argument("--refresh", action="store_true", help="re-download the census")
+    ap.add_argument("--insecure", action="store_true", help="skip the SSL certificate check when downloading")
     ap.add_argument("--out", default="queue.json")
     ap.add_argument("--columns", action="store_true")
     ap.add_argument("--start-mc", type=int, default=0)
@@ -113,7 +130,7 @@ def main():
     a = ap.parse_args()
 
     if a.refresh or not os.path.exists(a.census):
-        download(a.census)
+        download(a.census, a.insecure)
     csv.field_size_limit(1 << 24)
     f = open(a.census, newline="", encoding="utf-8", errors="replace")
     rd = csv.DictReader(f)
