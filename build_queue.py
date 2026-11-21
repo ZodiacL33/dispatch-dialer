@@ -73,7 +73,10 @@ def truthy(v):
 def download(path, insecure=False):
     import shutil, ssl, subprocess
     print("Downloading the FMCSA census (large file, a few minutes)...")
-    ctx = ssl._create_unverified_context() if insecure else None
+    ctx = None
+    if insecure:
+        ctx = ssl._create_unverified_context()
+        ctx.options |= getattr(ssl, "OP_IGNORE_UNEXPECTED_EOF", 0)
     req = urllib.request.Request(URL, headers={"User-Agent": "dispatch-dialer/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=60, context=ctx) as r, open(path, "wb") as f:
@@ -93,11 +96,24 @@ def download(path, insecure=False):
         os.remove(path)
     if "CERTIFICATE_VERIFY_FAILED" in err and shutil.which("curl"):
         print("\nPython could not verify the website certificate. Retrying with Windows' own downloader (curl)...")
-        rc = subprocess.call(["curl", "-L", "--fail", "-o", path, URL])
-        if rc == 0 and os.path.exists(path) and os.path.getsize(path) > 1_000_000:
+        part = path + ".part"
+        rc = subprocess.call(["curl", "-L", "--fail", "--ssl-no-revoke", "-o", part, URL])
+        size = os.path.getsize(part) if os.path.exists(part) else 0
+        # curl error 56 at the very end ("server closed abruptly") is common on Windows and the file is
+        # normally complete, so a big file is kept. Any half-written last line is cut off.
+        if (rc == 0 and size > 1_000_000) or (rc == 56 and size > 500_000_000):
+            with open(part, "rb+") as f:
+                f.seek(0, 2)
+                end = f.tell()
+                f.seek(max(0, end - 1_000_000))
+                tail = f.read()
+                if not tail.endswith(b"\n"):
+                    f.truncate(end - len(tail) + tail.rfind(b"\n") + 1)
+            os.replace(part, path)
+            print(f"\nDownloaded {size >> 20} MB." + ("" if rc == 0 else " (Windows reported a closing error, the file was kept.)"))
             return
-        if os.path.exists(path):
-            os.remove(path)
+        if os.path.exists(part):
+            os.remove(part)
     sys.exit(f"\nDownload failed: {err}\n"
              "Option 1: download the CSV in Chrome from https://data.transportation.gov/d/az4n-8mr2 "
              "(Export > CSV), save it in this folder as census.csv, then run: python build_queue.py\n"
